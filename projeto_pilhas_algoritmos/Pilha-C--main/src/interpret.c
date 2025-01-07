@@ -4,23 +4,60 @@
 #include "interpret.h"
 #include "stack.h"
 
-static Stack* stack = NULL;
+// Estrutura para variáveis
+typedef struct {
+    char nome[50];
+    int valor;
+} Variavel;
+
+static Variavel variaveis[100]; // Lista estática de variáveis
+static int num_variaveis = 0;   // Contador de variáveis
+static Stack* stack = NULL;     // Pilha para operações
 
 // Adicionamos uma variável para controlar o encerramento
 extern int should_exit;
 
+// Função auxiliar para encontrar uma variável pelo nome
+static int encontra_variavel(const char* nome) {
+    for (int i = 0; i < num_variaveis; i++) {
+        if (strcmp(variaveis[i].nome, nome) == 0) {
+            return i;
+        }
+    }
+    return -1; // Não encontrada
+}
+
+// Função principal para interpretar comandos
 void interpret(const char* source) {
     if (!stack) {
-        stack = new_stack(100);  // Tamanho máximo da pilha
+        stack = new_stack(100);  // Inicializa a pilha com tamanho máximo
     }
 
     char op[10];
-    char arg[10];
-    int arg;
+    char arg[50];
+    int valor;
 
-    if (sscanf(source, "%s %d", op, arg) == 2) {
+    if (sscanf(source, "%s %s", op, arg) == 2) {
         if (strcmp(op, "push") == 0) {
-            stack_push(stack, arg);
+            // `push <nome_da_variavel>` ou `push <valor>`
+            if (sscanf(arg, "%d", &valor) == 1) {
+                stack_push(stack, valor); // Push de valor literal
+            } else {
+                int idx = encontra_variavel(arg);
+                if (idx == -1) {
+                    printf("Erro: Variável '%s' não declarada!\n", arg);
+                } else {
+                    stack_push(stack, variaveis[idx].valor);
+                }
+            }
+        } else if (strcmp(op, "pop") == 0) {
+            // `pop <nome_da_variavel>`
+            int idx = encontra_variavel(arg);
+            if (idx == -1) {
+                printf("Erro: Variável '%s' não declarada!\n", arg);
+            } else {
+                variaveis[idx].valor = stack_pop(stack);
+            }
         } else {
             printf("Comando desconhecido: %s\n", op);
         }
@@ -64,3 +101,4 @@ void interpret(const char* source) {
         printf("Erro: Comando inválido!\n");
     }
 }
+
